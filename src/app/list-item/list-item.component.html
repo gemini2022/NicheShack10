@@ -1,0 +1,15 @@
+<div class="item"
+     tabindex="-1"
+     (contextmenu)="$event.preventDefault();"
+     [ngClass]="{'edited-item': listItem == editedItem,
+                 'unselected-item': listItem == unselectedItem,
+                 'disabled-item': editedItem && editedItem != listItem,
+                 'primary-selection': listItem == selectedItem && listItem.selected,
+                 'primary-selection-border-only': listItem == selectedItem && !listItem.selected,
+                 'secondary-selection-all': listItem.secondarySelectionType == SecondarySelectionType.All,
+                 'secondary-selection-top': listItem.secondarySelectionType == SecondarySelectionType.Top,
+                 'secondary-selection-middle': listItem.secondarySelectionType == SecondarySelectionType.Middle,
+                 'secondary-selection-bottom': listItem.secondarySelectionType == SecondarySelectionType.Bottom}"
+     (mousedown)="itemSelected.emit({listItem: listItem, mouseEvent: $event})">
+        {{listItem.text}}
+</div>

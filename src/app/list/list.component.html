@@ -1,0 +1,10 @@
+<div class="list-container">
+    <div *ngFor="let item of list">
+        <list-item [listItem]="item"
+                   [editedItem]="editedItem"
+                   [selectedItem]="selectedItem"
+                   [unselectedItem]="unselectedItem"
+                   (itemSelected)="onItemSelect($event)">
+        </list-item>
+    </div>
+</div>
