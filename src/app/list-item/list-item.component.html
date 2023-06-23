@@ -1,15 +1,21 @@
 <div class="item"
+     #htmlElement
      tabindex="-1"
      (contextmenu)="$event.preventDefault();"
-     [ngClass]="{'edited-item': listItem == editedItem,
-                 'unselected-item': listItem == unselectedItem,
-                 'disabled-item': editedItem && editedItem != listItem,
-                 'primary-selection': listItem == selectedItem && listItem.selected,
-                 'primary-selection-border-only': listItem == selectedItem && !listItem.selected,
+     [contentEditable]="listItem.inEditMode == true"
+     [ngClass]="{'edited-item': listItem.inEditMode,
+                 'disabled-item': listItem.isDisabled,
+                 'unselected-item': listItem.hasUnselection,
+                 'primary-selection': listItem.hasPrimarySelection && listItem.hasSecondarySelection,
                  'secondary-selection-all': listItem.secondarySelectionType == SecondarySelectionType.All,
                  'secondary-selection-top': listItem.secondarySelectionType == SecondarySelectionType.Top,
                  'secondary-selection-middle': listItem.secondarySelectionType == SecondarySelectionType.Middle,
-                 'secondary-selection-bottom': listItem.secondarySelectionType == SecondarySelectionType.Bottom}"
-     (mousedown)="itemSelected.emit({listItem: listItem, mouseEvent: $event})">
+                 'secondary-selection-bottom': listItem.secondarySelectionType == SecondarySelectionType.Bottom,
+                 'primary-selection-border-only': listItem.hasPrimarySelection && !listItem.hasSecondarySelection}"
+     (dblclick)="onDoubleClick.emit()"
+     (mousedown)="onListItemDown($event)">
+
+
+
         {{listItem.text}}
 </div>

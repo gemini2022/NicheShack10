@@ -1,10 +1,14 @@
 <div class="list-container">
-    <div *ngFor="let item of list">
-        <list-item [listItem]="item"
-                   [editedItem]="editedItem"
-                   [selectedItem]="selectedItem"
-                   [unselectedItem]="unselectedItem"
-                   (itemSelected)="onItemSelect($event)">
+    <div *ngFor="let listItem of list">
+        <list-item [listItem]="listItem"
+                   (onDoubleClick)="editListItem()"
+                   (onListItemAdded)="listItemAddedEvent.emit($event)"
+                   (onListItemEdited)="listItemEditedEvent.emit($event)"
+                   (onMouseDown)="stopMouseDownPropagation = true; selectListItem($event)"
+                   
+
+                   
+                   >
         </list-item>
     </div>
 </div>

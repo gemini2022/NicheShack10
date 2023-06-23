@@ -1,0 +1,66 @@
+.price-point-top-line {
+    color: white;
+    font-weight: bold;
+}
+
+
+
+.price-point-font-16 {
+    font-size: 16px;
+}
+
+.price-point-font-20 {
+    font-size: 20px;
+}
+
+.price-point-font-22 {
+    font-size: 22px;
+}
+
+.price-point-font-24 {
+    font-size: 24px;
+}
+
+.price-point-font-30 {
+    font-size: 30px;
+}
+
+
+
+
+
+.price-point-bottom-line {
+    color: #ababab;
+    font-size: 16px;
+    margin-top: 7px;
+}
+
+
+
+.price-point-strikethrough {
+    position: relative;
+    display: inline-block;
+    color: #eb01c8;
+    text-decoration: none;
+    margin-right: 10px;
+}
+
+.price-point-strikethrough::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background-color: #eb01c8;
+    transform: translateY(-2px) rotate(-7deg);
+}
+
+
+.price-point-strikethrough-text {
+    color: #ababab;
+}
+
+.price-point-new-price {
+    font-weight: bold;
+}

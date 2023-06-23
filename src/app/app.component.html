@@ -1,1 +1,8 @@
-<list [list]="testList"></list>
+<button (click)="addListItem()">Add List Item</button>
+<p></p>
+
+<list #list
+      [list]="testList"
+      (listItemAddedEvent)="onListItemAdded($event)"
+      (listItemEditedEvent)="onListItemEdited($event)">
+</list>

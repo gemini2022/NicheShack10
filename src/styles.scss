@@ -141,12 +141,13 @@ body {
 .edited-item {
     outline: none;
     border-right: none;
+    background: #2b2b2b;
+    color: #dcdcdc;
+    border-color: #ffba0040;
 }
 
 
 
-.edited-item-text {
-    background: #2b2b2b;
-    color: #dcdcdc;
-    border-color: #ffba0040;
+.disabled-item {
+    opacity: 0.2;
 }
