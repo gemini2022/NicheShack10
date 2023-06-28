@@ -5,8 +5,14 @@ export enum SecondarySelectionType {
     All
 }
 
+
 export enum ExitEditType {
-    Escape,
     Enter,
-    Blur
+    Escape
+}
+
+
+export enum ArrowKeyType {
+    Up,
+    Down
 }

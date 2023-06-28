@@ -10,7 +10,7 @@ import { ListComponent } from './list/list.component';
 export class AppComponent {
   public testList: Array<ListItem> = new Array<ListItem>();
 
-  @ViewChild('list') list!: ListComponent;
+  @ViewChild('list') listComponent!: ListComponent;
 
   ngOnInit() {
     for (let i = 0; i < 20; i++) {
@@ -20,15 +20,25 @@ export class AppComponent {
 
 
   addListItem() {
-    this.list.addListItem();
+    this.listComponent.addListItem();
+  }
+
+
+  editListItem() {
+    this.listComponent.editListItem();
+  }
+
+
+  onListItemsToBeDeleted(listItemsToBeDeleted: Array<ListItem>) {
+    this.listComponent.deleteListItems();
   }
 
 
   onListItemAdded(listItem: ListItem) {
-    // console.log('list item added: ', listItem)
+    console.log('list item added: ', listItem)
   }
 
   onListItemEdited(listItem: ListItem) {
-    // console.log('list item edited: ', listItem)
+    console.log('list item edited: ', listItem)
   }
 }

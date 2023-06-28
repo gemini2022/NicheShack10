@@ -6,8 +6,4 @@ import { List } from '../list';
   templateUrl: './list.component.html',
   styleUrls: ['./list.component.scss']
 })
-export class ListComponent extends List{
-
-
-  
-}
+export class ListComponent extends List { }

@@ -1,6 +1,6 @@
 import { Component, ElementRef, EventEmitter, Input, Output, ViewChild } from '@angular/core';
 import { ListItem } from '../list-item';
-import { ExitEditType, SecondarySelectionType } from '../enums';
+import { SecondarySelectionType } from '../enums';
 
 @Component({
   selector: 'list-item',
@@ -9,7 +9,6 @@ import { ExitEditType, SecondarySelectionType } from '../enums';
 })
 export class ListItemComponent {
   // Public
-  public ExitEditType = ExitEditType;
   public SecondarySelectionType = SecondarySelectionType;
 
   // Input
@@ -18,22 +17,12 @@ export class ListItemComponent {
   // Output
   @Output() public onDoubleClick: EventEmitter<void> = new EventEmitter();
   @Output() public onMouseDown: EventEmitter<ListItem> = new EventEmitter();
-  @Output() public onListItemAdded: EventEmitter<ListItem> = new EventEmitter();
-  @Output() public onListItemEdited: EventEmitter<ListItem> = new EventEmitter();
 
   // View Child
   @ViewChild('htmlElement') htmlElement!: ElementRef<HTMLElement>;
 
-  ngOnInit() {
-    this.listItem.onListItemAdded.subscribe(()=> {
-      this.onListItemAdded.emit(this.listItem);
-    });
-    this.listItem.onListItemEdited.subscribe(()=> {
-      this.onListItemEdited.emit(this.listItem);
-    });
-  }
 
-
+  
   ngAfterViewInit() {
     this.listItem.htmlElement = this.htmlElement;
   }
@@ -42,6 +31,7 @@ export class ListItemComponent {
   
   onListItemDown(e: MouseEvent) {
     const rightMouseButton = 2;
+    this.onMouseDown.emit();
 
     // As long as this list item is (NOT) currently in edited mode
     if (!this.listItem.inEditMode) {

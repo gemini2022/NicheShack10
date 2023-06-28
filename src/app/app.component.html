@@ -1,8 +1,21 @@
-<button (click)="addListItem()">Add List Item</button>
-<p></p>
+<div style="display: flex; margin: 15px 0 30px 5px;">
+      <button style="margin-right: 20px;" (click)="addListItem()" (mousedown)="listComponent.stopMouseDownPropagation = true">Add List Item</button>
+      <button style="margin-right: 20px;" (click)="editListItem()" (mousedown)="listComponent.stopMouseDownPropagation = true">Edit List Item</button>
+      <button style="margin-right: 20px;" (click)="listComponent.getListItemsToBeDeleted()" (mousedown)="listComponent.stopMouseDownPropagation = true">Delete List Item</button>
+</div>
 
-<list #list
-      [list]="testList"
-      (listItemAddedEvent)="onListItemAdded($event)"
-      (listItemEditedEvent)="onListItemEdited($event)">
-</list>
+
+
+<div style="display: flex; padding: 20px;">
+
+      <div style="background: #282828; padding: 10px; border: 1px solid #414141; border-radius: 4px; margin-right: 100px;">
+            <div style="width: 300px; height: 262px; background: #1e1e1e; border-radius: 3px; border: 1px solid black; border-right-color: #3c3c3c; border-bottom-color: #3c3c3c;">
+                  <list #list
+                        [list]="testList"
+                        (addedListItemEvent)="onListItemAdded($event)"
+                        (editedListItemEvent)="onListItemEdited($event)"
+                        (listItemsToBeDeletedEvent)="onListItemsToBeDeleted($event)">
+                  </list>
+            </div>
+      </div>
+</div>

@@ -1,6 +1,6 @@
 import { Directive, EventEmitter, Input, Output } from "@angular/core";
 import { ListItem } from "./list-item";
-import { ExitEditType, SecondarySelectionType } from "./enums";
+import { ArrowKeyType, ExitEditType } from "./enums";
 
 @Directive()
 export class List {
@@ -16,68 +16,70 @@ export class List {
     @Input() public list!: Array<ListItem>;
 
     // Events
-    @Output() public listItemAddedEvent: EventEmitter<ListItem> = new EventEmitter();
-    @Output() public listItemEditedEvent: EventEmitter<ListItem> = new EventEmitter();
-
+    @Output() public addedListItemEvent: EventEmitter<ListItem> = new EventEmitter();
+    @Output() public editedListItemEvent: EventEmitter<ListItem> = new EventEmitter();
+    @Output() public deletedListItemsEvent: EventEmitter<Array<ListItem>> = new EventEmitter();
+    @Output() public deleteKeyPressedEvent: EventEmitter<Array<ListItem>> = new EventEmitter();
+    @Output() public listItemsToBeDeletedEvent: EventEmitter<Array<ListItem>> = new EventEmitter();
 
 
 
     public selectListItem(listItem: ListItem): void {
-        this.addEventListeners();
-
-        // If another item is being edited, remove it from edit mode
         const editableListItem = this.list.find(x => x.inEditMode);
-        if (editableListItem) {
-            this.list.forEach(x => x.isDisabled = false);
-            editableListItem.onExitListItemEdit(ExitEditType.Blur);
-        }
+        if (editableListItem) editableListItem.exitEdit(this);
         this.setSelectedItems(listItem);
     }
 
 
 
 
-
-
-
-
     public addListItem(): void {
-        this.list.forEach(x => {
-            x.isPivot = false;
-            x.isDisabled = true;
-            x.hasUnselection = false;
-            x.hasPrimarySelection = false;
-            x.hasSecondarySelection = false;
-            x.secondarySelectionType = null!;
-        })
+        this.addEventListeners();
+        this.resetListItemProperties();
+        this.stopMouseDownPropagation = false;
         this.list.unshift(new ListItem('', ''));
-        this.list[0].isNew = true;
-        this.list[0].inEditMode = true;
-        window.setTimeout(() => {
-            this.list[0].htmlElement.nativeElement.focus();
-        })
+        this.list[0].initialize();
     }
+
 
 
 
     public editListItem() {
         const listItem = this.list.find(x => x.hasPrimarySelection);
-        if (listItem) {
-            listItem.inEditMode = true;
-            listItem.hasPrimarySelection = false;
-            this.list.forEach(x => {
-                if (!x.inEditMode) x.isDisabled = true;
-            })
-            this.selectRange(listItem);
-        }
+        if (!listItem) return;
+        listItem.setToEditMode(this);
     }
 
 
 
 
+    public getListItemsToBeDeleted() {
+        this.listItemsToBeDeletedEvent.emit(this.list.filter(x => x.hasSecondarySelection));
+    }
+
+
+
+    public deleteListItems(): void {
+        if (this.list.find(x => x.inEditMode)) return;
+
+        const listItemsToBeDeleted = this.list.filter(x => x.hasSecondarySelection);
+        if (listItemsToBeDeleted.length == 0) return;
+        this.deletedListItemsEvent.emit(listItemsToBeDeleted);
+
+        const primarySelectedIndex = this.list.findIndex(x => x.hasPrimarySelection);
+        const nextSelectedItem = primarySelectedIndex != -1 ? this.list.slice(primarySelectedIndex + 1).find(x => !x.hasSecondarySelection) : null;
+
+        this.list = this.list.filter(x => !listItemsToBeDeleted.includes(x));
+        if (nextSelectedItem) this.selectListItem(nextSelectedItem);
+    }
+
+
 
 
     private setSelectedItems(listItem: ListItem): void {
+        this.addEventListeners();
+        listItem.htmlElement.nativeElement.focus();
+
         if (this.shiftKeyDown) {
             this.onItemSelectionUsingShiftKey(listItem);
         } else if (this.ctrlKeyDown) {
@@ -91,8 +93,7 @@ export class List {
 
 
 
-
-    onItemSelectionUsingShiftKey(listItem: ListItem) {
+    private onItemSelectionUsingShiftKey(listItem: ListItem) {
         this.list.forEach(x => {
             x.hasUnselection = false;
             x.hasPrimarySelection = false;
@@ -112,34 +113,24 @@ export class List {
 
 
 
-    onItemSelectionUsingCtrlKey(listItem: ListItem) {
+    private onItemSelectionUsingCtrlKey(listItem: ListItem) {
         this.list.forEach(x => {
             x.isPivot = false;
             x.hasUnselection = false;
             x.hasPrimarySelection = false;
             x.secondarySelectionType = null!;
         });
-        if (listItem.hasSecondarySelection) {
-            listItem.hasUnselection = true;
-            listItem.hasSecondarySelection = false;
-
-        } else {
-            listItem.hasPrimarySelection = true;
-            listItem.hasSecondarySelection = true;
-        }
         listItem.isPivot = true;
+        listItem.hasUnselection = listItem.hasSecondarySelection;
+        listItem.hasPrimarySelection = !listItem.hasSecondarySelection;
+        listItem.hasSecondarySelection = !listItem.hasUnselection;
     }
 
 
 
-    onItemSelectionUsingNoModifierKey(listItem: ListItem): void {
-        this.list.forEach(x => {
-            x.isPivot = false;
-            x.hasUnselection = false;
-            x.hasPrimarySelection = false;
-            x.hasSecondarySelection = false;
-            x.secondarySelectionType = null!;
-        });
+
+    private onItemSelectionUsingNoModifierKey(listItem: ListItem): void {
+        this.resetListItemProperties();
         listItem.isPivot = true;
         listItem.hasPrimarySelection = true;
         listItem.hasSecondarySelection = true;
@@ -148,116 +139,44 @@ export class List {
 
 
 
-
-
     private setSecondarySelectionType(): void {
-        const length = this.list.length;
-        const firstListItem = this.list[0];
-        const secondListItem = this.list[1];
-        const lastListItem = this.list[length - 1];
-        const secondToLastListItem = this.list[length - 2];
-
-
         if (length !== 1) {
-            if (firstListItem.hasSecondarySelection && !firstListItem.hasPrimarySelection) {
-                if (secondListItem.hasSecondarySelection || secondListItem.hasUnselection) {
-                    firstListItem.secondarySelectionType = SecondarySelectionType.Top;
-                } else if (!secondListItem.hasSecondarySelection && !secondListItem.hasUnselection) {
-                    firstListItem.secondarySelectionType = SecondarySelectionType.All;
-                }
-            }
+            const length = this.list.length;
+            const firstListItem = this.list[0];
+            const secondListItem = this.list[1];
+            const lastListItem = this.list[length - 1];
+            const secondToLastListItem = this.list[length - 2];
 
+            firstListItem.setFirstListItemSecondarySelectionType(secondListItem);
             for (let i = 1; i < length - 1; i++) {
                 const currentListItem = this.list[i];
                 const prevListItem = this.list[i - 1];
                 const nextListItem = this.list[i + 1];
-
-                if (currentListItem.hasSecondarySelection && !currentListItem.hasPrimarySelection) {
-                    if (!prevListItem.hasSecondarySelection && nextListItem.hasSecondarySelection) {
-                        if (prevListItem.hasUnselection) {
-                            currentListItem.secondarySelectionType = SecondarySelectionType.Middle;
-                            continue;
-                        } else {
-                            currentListItem.secondarySelectionType = SecondarySelectionType.Top;
-                            continue;
-                        }
-                    }
-
-                    if (prevListItem.hasSecondarySelection && !nextListItem.hasSecondarySelection) {
-                        if (nextListItem.hasUnselection) {
-                            currentListItem.secondarySelectionType = SecondarySelectionType.Middle;
-                            continue;
-                        } else {
-                            currentListItem.secondarySelectionType = SecondarySelectionType.Bottom;
-                            continue;
-                        }
-                    }
-
-                    if (!prevListItem.hasSecondarySelection && !nextListItem.hasSecondarySelection) {
-                        if (prevListItem.hasUnselection) {
-                            currentListItem.secondarySelectionType = SecondarySelectionType.Bottom;
-                            continue;
-                        } else if (nextListItem.hasUnselection) {
-                            currentListItem.secondarySelectionType = SecondarySelectionType.Top;
-                            continue;
-                        } else {
-                            currentListItem.secondarySelectionType = SecondarySelectionType.All;
-                            continue;
-                        }
-                    }
-
-                    if (prevListItem.hasSecondarySelection && nextListItem.hasSecondarySelection) {
-                        currentListItem.secondarySelectionType = SecondarySelectionType.Middle;
-                    }
-                }
+                currentListItem.setMiddleListItemSecondarySelectionType(prevListItem, nextListItem);
             }
-
-            if (lastListItem.hasSecondarySelection && !lastListItem.hasPrimarySelection) {
-                if (secondToLastListItem.hasSecondarySelection || secondToLastListItem.hasUnselection) {
-                    lastListItem.secondarySelectionType = SecondarySelectionType.Bottom;
-                } else if (!secondToLastListItem.hasSecondarySelection && !secondToLastListItem.hasUnselection) {
-                    lastListItem.secondarySelectionType = SecondarySelectionType.All;
-                }
-            }
+            lastListItem.setLastListItemSecondarySelectionType(secondToLastListItem);
         }
     }
 
 
 
 
-
-
-
-
-
-
-
-
     private onKeyDown = (e: KeyboardEvent): void => {
         switch (e.key) {
-            case 'Enter':
-                // this.onEnter(e);
-                break;
-            case 'ArrowUp':
-                // this.onArrowUp(e);
-                break;
-            case 'ArrowDown':
-                // this.onArrowDown(e);
-                break;
             case 'Escape':
                 this.onEscape();
                 break;
+            case 'Enter':
+                this.onEnter(e);
+                break;
+            case 'ArrowUp': case 'ArrowDown':
+                this.onArrowKey(e, e.key === 'ArrowUp' ? ArrowKeyType.Up : ArrowKeyType.Down);
+                break;
+            case 'Shift': case 'Control':
+                e.key == 'Shift' ? this.shiftKeyDown = true : this.ctrlKeyDown = true;
+                break;
             case 'Delete':
-                // this.emitPressedDeleteKey();
-                break;
-            case 'Control':
-                this.ctrlKeyDown = true;
-                break;
-            case 'Shift':
-                this.shiftKeyDown = true;
-                break;
-
-            default:
+                this.emitPressedDeleteKey();
                 break;
         }
     }
@@ -268,13 +187,8 @@ export class List {
 
     private onKeyUp = (e: KeyboardEvent): void => {
         switch (e.key) {
-            case 'Control':
-                this.ctrlKeyDown = false;
-                break;
-            case 'Shift':
-                this.shiftKeyDown = false;
-                break;
-            default:
+            case 'Shift': case 'Control':
+                e.key == 'Shift' ? this.shiftKeyDown = false : this.ctrlKeyDown = false;
                 break;
         }
     }
@@ -283,30 +197,12 @@ export class List {
 
 
     private onMouseDown = (): void => {
-        if (!this.stopMouseDownPropagation) {
-            const editableListItem = this.list.find(x => x.inEditMode);
-            if (editableListItem) {
-                this.list.forEach(x => x.isDisabled = false);
-                editableListItem.onExitListItemEdit(ExitEditType.Blur);
-            } else {
-                this.reinitializeList();
-            }
-        } else {
+        if (this.stopMouseDownPropagation) {
             this.stopMouseDownPropagation = false;
+            return
         }
-    }
-
-
-
-
-
-
-    private selectRange(listItem: ListItem) {
-        const range = document.createRange();
-        range.selectNodeContents(listItem.htmlElement.nativeElement);
-        const selection = window.getSelection();
-        selection!.removeAllRanges();
-        selection!.addRange(range);
+        const editableListItem = this.list.find(x => x.inEditMode);
+        editableListItem ? editableListItem.exitEdit(this) : this.reinitializeList();
     }
 
 
@@ -314,25 +210,37 @@ export class List {
 
     private onEscape() {
         const editableListItem = this.list.find(x => x.inEditMode);
-        if (editableListItem) {
-            this.list.forEach(x => x.isDisabled = false);
-
-            if (editableListItem.isNew) {
-                this.removeNewItem();
-            } else {
-                editableListItem.onExitListItemEdit(ExitEditType.Escape);
-            }
-        } else {
-            this.reinitializeList();
-        }
+        editableListItem ? editableListItem.exitEdit(this, ExitEditType.Escape) : this.reinitializeList();
     }
 
 
 
-    private removeNewItem() {
-        this.list.splice(0, 1);
-        this.reinitializeList();
+
+    private onEnter(e: KeyboardEvent): void {
+        e.preventDefault();
+        const editableListItem = this.list.find(x => x.inEditMode);
+        if (editableListItem) editableListItem.exitEdit(this, ExitEditType.Enter);
     }
+
+
+
+
+
+    private onArrowKey(e: KeyboardEvent, arrowKeyType: ArrowKeyType): void {
+        e.preventDefault();
+        const currentListItem = this.list.find(x => x.inEditMode || x.hasPrimarySelection || x.hasUnselection);
+        currentListItem!.selectNextListItem(this, arrowKeyType);
+    }
+
+
+
+
+    private emitPressedDeleteKey(): void {
+        if (this.list.find(x => x.inEditMode)) return;
+        const listItemsToBeDeleted = this.list.filter(x => x.hasSecondarySelection);
+        if (listItemsToBeDeleted.length > 0) this.deleteKeyPressedEvent.emit(listItemsToBeDeleted);
+    }
+
 
 
 
@@ -348,8 +256,7 @@ export class List {
 
 
 
-
-    private reinitializeList() {
+    private resetListItemProperties() {
         this.list.forEach(x => {
             x.isPivot = false;
             x.isDisabled = false;
@@ -359,6 +266,14 @@ export class List {
             x.hasSecondarySelection = false;
             x.secondarySelectionType = null!;
         });
+    }
+
+
+
+
+    public reinitializeList() {
+        this.resetListItemProperties()
+        this.eventListenersAdded = false;
         window.removeEventListener('keyup', this.onKeyUp);
         window.removeEventListener('keydown', this.onKeyDown);
         window.removeEventListener('mousedown', this.onMouseDown);

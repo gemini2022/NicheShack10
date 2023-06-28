@@ -1,14 +1,11 @@
-<div class="list-container">
+<div #listContainer
+     class="list-container"
+     (mousedown)="$event.clientX - listContainer.getBoundingClientRect().left >= listContainer.clientWidth ? stopMouseDownPropagation = true : null">
+
     <div *ngFor="let listItem of list">
         <list-item [listItem]="listItem"
                    (onDoubleClick)="editListItem()"
-                   (onListItemAdded)="listItemAddedEvent.emit($event)"
-                   (onListItemEdited)="listItemEditedEvent.emit($event)"
-                   (onMouseDown)="stopMouseDownPropagation = true; selectListItem($event)"
-                   
-
-                   
-                   >
+                   (onMouseDown)="stopMouseDownPropagation = true; $event ? selectListItem($event) : null">
         </list-item>
     </div>
 </div>
