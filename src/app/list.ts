@@ -1,34 +1,55 @@
-import { Directive, EventEmitter, Input, Output } from "@angular/core";
+import { Directive, ElementRef, EventEmitter, Input, Output, QueryList, SimpleChanges, ViewChildren } from "@angular/core";
 import { ListItem } from "./list-item";
 import { ArrowKeyType, ExitEditType } from "./enums";
+import { ListItemComponent } from "./list-item/list-item.component";
 
 @Directive()
 export class List {
     // Private
-    private ctrlKeyDown!: boolean;
-    private shiftKeyDown!: boolean;
-    private eventListenersAdded!: boolean;
+    private idOfEditedListItem: any;
+    private ctrlKeyDown: boolean = false;
+    private shiftKeyDown: boolean = false;
+    private eventListenersAdded: boolean = false;
+
+    private listItemIds: Array<any> = new Array<any>();
 
     // Public
-    public stopMouseDownPropagation!: boolean;
+    public stopMouseDownPropagation: boolean = false;
 
     // Inputs
-    @Input() public list!: Array<ListItem>;
+    @Input() public list: Array<ListItem> = new Array<ListItem>();
 
     // Events
-    @Output() public addedListItemEvent: EventEmitter<ListItem> = new EventEmitter();
     @Output() public editedListItemEvent: EventEmitter<ListItem> = new EventEmitter();
+    @Output() public addedListItemEvent: EventEmitter<Array<string>> = new EventEmitter();
     @Output() public deletedListItemsEvent: EventEmitter<Array<ListItem>> = new EventEmitter();
     @Output() public deleteKeyPressedEvent: EventEmitter<Array<ListItem>> = new EventEmitter();
     @Output() public listItemsToBeDeletedEvent: EventEmitter<Array<ListItem>> = new EventEmitter();
 
+    // View Children
+    @ViewChildren('listItem') listItemComponents: QueryList<ListItemComponent> = new QueryList<ListItemComponent>();
+
+
+
+    private ngOnChanges(changes: SimpleChanges): void {
+        if (changes.list) {
+            this.selectEditedListItem();
+            this.selectNewListItem();
+        }
+    }
+
+    
+
 
 
     public selectListItem(listItem: ListItem): void {
-        const editableListItem = this.list.find(x => x.inEditMode);
+        const editableListItem = this.listItemComponents.find(x => x.inEditMode);
         if (editableListItem) editableListItem.exitEdit(this);
-        this.setSelectedItems(listItem);
+
+        const listItemComponent = this.listItemComponents.find(x => x.listItem.id == listItem.id);
+        if (listItemComponent) this.setSelectedItems(listItemComponent);
     }
+
 
 
 
@@ -37,46 +58,55 @@ export class List {
         this.addEventListeners();
         this.resetListItemProperties();
         this.stopMouseDownPropagation = false;
+        this.list.forEach(x => this.listItemIds.push(x.id));
         this.list.unshift(new ListItem('', ''));
-        this.list[0].initialize();
+        window.setTimeout(() => {
+            this.listItemComponents.first.initialize(this);
+        })
+
     }
 
 
 
 
     public editListItem() {
-        const listItem = this.list.find(x => x.hasPrimarySelection);
+        const listItem = this.listItemComponents.find(x => x.hasPrimarySelection);
         if (!listItem) return;
+        this.idOfEditedListItem = listItem.listItem.id;
         listItem.setToEditMode(this);
     }
 
 
 
 
-    public getListItemsToBeDeleted() {
-        this.listItemsToBeDeletedEvent.emit(this.list.filter(x => x.hasSecondarySelection));
-    }
-
-
-
     public deleteListItems(): void {
-        if (this.list.find(x => x.inEditMode)) return;
+        if (this.listItemComponents.find(x => x.inEditMode)) return;
 
-        const listItemsToBeDeleted = this.list.filter(x => x.hasSecondarySelection);
-        if (listItemsToBeDeleted.length == 0) return;
+        const selectedListItems = this.listItemComponents.filter(x => x.hasSecondarySelection);
+        if (selectedListItems.length == 0) return;
+
+        const listItemsToBeDeleted = selectedListItems.map(x => new ListItem(x.listItem.id, x.listItem.text));
         this.deletedListItemsEvent.emit(listItemsToBeDeleted);
 
-        const primarySelectedIndex = this.list.findIndex(x => x.hasPrimarySelection);
-        const nextSelectedItem = primarySelectedIndex != -1 ? this.list.slice(primarySelectedIndex + 1).find(x => !x.hasSecondarySelection) : null;
+        const indexOfPrimarySelectedListItem = this.listItemComponents.toArray().findIndex(x => x.hasPrimarySelection);
+        const nextListComponent = indexOfPrimarySelectedListItem != -1 ? this.listItemComponents.toArray().slice(indexOfPrimarySelectedListItem + 1).find(x => !x.hasSecondarySelection) : null;
+        const nextSelectedListItem = nextListComponent ? this.list.find(x => x.id == nextListComponent.listItem.id) : null;
 
         this.list = this.list.filter(x => !listItemsToBeDeleted.includes(x));
-        if (nextSelectedItem) this.selectListItem(nextSelectedItem);
+        if (nextSelectedListItem) this.selectListItem(nextSelectedListItem);
     }
 
 
 
 
-    private setSelectedItems(listItem: ListItem): void {
+    public getListItemsToBeDeleted() {
+        const listItemsToBeDeleted = this.listItemComponents.filter(x => x.hasSecondarySelection).map(x => new ListItem(x.listItem.id, x.listItem.text));
+        this.listItemsToBeDeletedEvent.emit(listItemsToBeDeleted);
+    }
+
+
+
+    private setSelectedItems(listItem: ListItemComponent): void {
         this.addEventListeners();
         listItem.htmlElement.nativeElement.focus();
 
@@ -93,47 +123,49 @@ export class List {
 
 
 
-    private onItemSelectionUsingShiftKey(listItem: ListItem) {
-        this.list.forEach(x => {
+    private onItemSelectionUsingShiftKey(listItemComponent: ListItemComponent) {
+        this.listItemComponents.forEach(x => {
             x.hasUnselection = false;
             x.hasPrimarySelection = false;
             x.hasSecondarySelection = false;
-            x.secondarySelectionType = null!;
+            x.secondarySelectionType = null;
         });
-        const selectedListItemIndex = this.list.indexOf(listItem);
-        const pivotItemIndex = this.list.findIndex(x => x.isPivot);
-        const start = Math.min(pivotItemIndex, selectedListItemIndex);
-        const end = Math.max(pivotItemIndex, selectedListItemIndex);
+        const selectedListItemIndex = this.list.indexOf(listItemComponent.listItem);
+        const pivotListItem = this.listItemComponents.find(x => x.isPivot);
+        const indexOfPivotListItem = pivotListItem ? this.list.indexOf(pivotListItem.listItem) : -1;
+        const start = Math.min(indexOfPivotListItem, selectedListItemIndex);
+        const end = Math.max(indexOfPivotListItem, selectedListItemIndex);
 
         for (let i = start; i <= end; i++) {
-            this.list[i].hasSecondarySelection = true;
+            const itemComponent = this.listItemComponents.get(i);
+            if (itemComponent !== undefined) itemComponent.hasSecondarySelection = true;
         }
-        listItem.hasPrimarySelection = true;
+        listItemComponent.hasPrimarySelection = true;
     }
 
 
 
-    private onItemSelectionUsingCtrlKey(listItem: ListItem) {
-        this.list.forEach(x => {
+    private onItemSelectionUsingCtrlKey(listItemComponent: ListItemComponent) {
+        this.listItemComponents.forEach(x => {
             x.isPivot = false;
             x.hasUnselection = false;
             x.hasPrimarySelection = false;
-            x.secondarySelectionType = null!;
+            x.secondarySelectionType = null;
         });
-        listItem.isPivot = true;
-        listItem.hasUnselection = listItem.hasSecondarySelection;
-        listItem.hasPrimarySelection = !listItem.hasSecondarySelection;
-        listItem.hasSecondarySelection = !listItem.hasUnselection;
+        listItemComponent.isPivot = true;
+        listItemComponent.hasUnselection = listItemComponent.hasSecondarySelection;
+        listItemComponent.hasPrimarySelection = !listItemComponent.hasSecondarySelection;
+        listItemComponent.hasSecondarySelection = !listItemComponent.hasUnselection;
     }
 
 
 
 
-    private onItemSelectionUsingNoModifierKey(listItem: ListItem): void {
+    private onItemSelectionUsingNoModifierKey(listItemComponent: ListItemComponent): void {
         this.resetListItemProperties();
-        listItem.isPivot = true;
-        listItem.hasPrimarySelection = true;
-        listItem.hasSecondarySelection = true;
+        listItemComponent.isPivot = true;
+        listItemComponent.hasPrimarySelection = true;
+        listItemComponent.hasSecondarySelection = true;
     }
 
 
@@ -141,20 +173,20 @@ export class List {
 
     private setSecondarySelectionType(): void {
         if (length !== 1) {
-            const length = this.list.length;
-            const firstListItem = this.list[0];
-            const secondListItem = this.list[1];
-            const lastListItem = this.list[length - 1];
-            const secondToLastListItem = this.list[length - 2];
+            const length = this.listItemComponents.length;
+            const firstListItem = this.listItemComponents.first;
+            const secondListItem = this.listItemComponents.get(1);
+            const lastListItem = this.listItemComponents.last;
+            const secondToLastListItem = this.listItemComponents.get(length - 2);
 
-            firstListItem.setFirstListItemSecondarySelectionType(secondListItem);
+            if (secondListItem) firstListItem.setFirstListItemSecondarySelectionType(secondListItem);
             for (let i = 1; i < length - 1; i++) {
-                const currentListItem = this.list[i];
-                const prevListItem = this.list[i - 1];
-                const nextListItem = this.list[i + 1];
-                currentListItem.setMiddleListItemSecondarySelectionType(prevListItem, nextListItem);
+                const currentListItem = this.listItemComponents.get(i);
+                const prevListItem = this.listItemComponents.get(i - 1);
+                const nextListItem = this.listItemComponents.get(i + 1);
+                if (prevListItem && currentListItem && nextListItem) currentListItem.setMiddleListItemSecondarySelectionType(prevListItem, nextListItem);
             }
-            lastListItem.setLastListItemSecondarySelectionType(secondToLastListItem);
+            if (secondToLastListItem) lastListItem.setLastListItemSecondarySelectionType(secondToLastListItem);
         }
     }
 
@@ -201,7 +233,7 @@ export class List {
             this.stopMouseDownPropagation = false;
             return
         }
-        const editableListItem = this.list.find(x => x.inEditMode);
+        const editableListItem = this.listItemComponents.find(x => x.inEditMode);
         editableListItem ? editableListItem.exitEdit(this) : this.reinitializeList();
     }
 
@@ -209,7 +241,7 @@ export class List {
 
 
     private onEscape() {
-        const editableListItem = this.list.find(x => x.inEditMode);
+        const editableListItem = this.listItemComponents.find(x => x.inEditMode);
         editableListItem ? editableListItem.exitEdit(this, ExitEditType.Escape) : this.reinitializeList();
     }
 
@@ -218,7 +250,7 @@ export class List {
 
     private onEnter(e: KeyboardEvent): void {
         e.preventDefault();
-        const editableListItem = this.list.find(x => x.inEditMode);
+        const editableListItem = this.listItemComponents.find(x => x.inEditMode);
         if (editableListItem) editableListItem.exitEdit(this, ExitEditType.Enter);
     }
 
@@ -228,16 +260,16 @@ export class List {
 
     private onArrowKey(e: KeyboardEvent, arrowKeyType: ArrowKeyType): void {
         e.preventDefault();
-        const currentListItem = this.list.find(x => x.inEditMode || x.hasPrimarySelection || x.hasUnselection);
-        currentListItem!.selectNextListItem(this, arrowKeyType);
+        const currentListItem = this.listItemComponents.find(x => x.inEditMode || x.hasPrimarySelection || x.hasUnselection);
+        if (currentListItem) currentListItem.onArrowKey(this, arrowKeyType);
     }
 
 
 
 
     private emitPressedDeleteKey(): void {
-        if (this.list.find(x => x.inEditMode)) return;
-        const listItemsToBeDeleted = this.list.filter(x => x.hasSecondarySelection);
+        if (this.listItemComponents.find(x => x.inEditMode)) return;
+        const listItemsToBeDeleted = this.listItemComponents.filter(x => x.hasSecondarySelection).map(x => new ListItem(x.listItem.id, x.listItem.text));
         if (listItemsToBeDeleted.length > 0) this.deleteKeyPressedEvent.emit(listItemsToBeDeleted);
     }
 
@@ -257,14 +289,14 @@ export class List {
 
 
     private resetListItemProperties() {
-        this.list.forEach(x => {
+        this.listItemComponents.forEach(x => {
             x.isPivot = false;
             x.isDisabled = false;
             x.inEditMode = false;
             x.hasUnselection = false;
             x.hasPrimarySelection = false;
             x.hasSecondarySelection = false;
-            x.secondarySelectionType = null!;
+            x.secondarySelectionType = null;
         });
     }
 
@@ -277,5 +309,36 @@ export class List {
         window.removeEventListener('keyup', this.onKeyUp);
         window.removeEventListener('keydown', this.onKeyDown);
         window.removeEventListener('mousedown', this.onMouseDown);
+    }
+
+
+
+
+    private selectEditedListItem(): void {
+        if (this.idOfEditedListItem != null) {
+            const indexOfListItemToSelect = this.list.findIndex(x => x.id === this.idOfEditedListItem);
+            this.idOfEditedListItem = null;
+            this.selectListItemByIndex(indexOfListItemToSelect);
+        }
+    }
+
+    private selectNewListItem(): void {
+        if (this.listItemIds.length > 0) {
+            const indexOfListItemToSelect = this.list.findIndex(x => !this.listItemIds.includes(x.id));
+            this.listItemIds = [];
+            this.selectListItemByIndex(indexOfListItemToSelect);
+        }
+    }
+
+    private selectListItemByIndex(index: number): void {
+        window.setTimeout(() => {
+            const listItemComponent = this.listItemComponents.get(index);
+            if (listItemComponent) listItemComponent.reselectItem(this);
+        });
+    }
+
+
+    trumpy(index: number, listItem: ListItem) {
+        return listItem.id;
     }
 }

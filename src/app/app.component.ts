@@ -1,6 +1,7 @@
 import { Component, ViewChild } from '@angular/core';
 import { ListItem } from './list-item';
 import { ListComponent } from './list/list.component';
+import { DataService } from './services/data/data.service';
 
 @Component({
   selector: 'app-root',
@@ -12,10 +13,16 @@ export class AppComponent {
 
   @ViewChild('list') listComponent!: ListComponent;
 
+
+  constructor(private dataService: DataService) { }
+
+
   ngOnInit() {
-    for (let i = 0; i < 20; i++) {
-      this.testList.push(new ListItem(i.toString(), 'ListItem' + (i + 1)))
-    }
+    this.dataService.getItems('api/Test').subscribe(
+      (listItems: Array<ListItem>) => {
+        this.testList = listItems;
+      }
+    )
   }
 
 
@@ -34,11 +41,21 @@ export class AppComponent {
   }
 
 
-  onListItemAdded(listItem: ListItem) {
-    console.log('list item added: ', listItem)
+  onListItemAdded(listItemsTexts: Array<string>) {
+    this.dataService.post('api/Test', {
+      texts: listItemsTexts
+    }).subscribe((listItems: Array<ListItem>) => {
+      this.testList = listItems;
+    });
   }
 
+
   onListItemEdited(listItem: ListItem) {
-    console.log('list item edited: ', listItem)
+    this.dataService.put('api/Test', {
+      id: listItem.id,
+      text: listItem.text
+    }).subscribe((listItems: Array<ListItem>) => {
+      this.testList = listItems;
+    });
   }
 }
