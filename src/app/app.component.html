@@ -14,6 +14,8 @@
                         [list]="testList"
                         (addedListItemEvent)="onListItemAdded($event)"
                         (editedListItemEvent)="onListItemEdited($event)"
+                        (pastedListItemsEvent)="onPastedListItems($event)"
+                        (deletedListItemsEvent)="onDeletedListItems($event)"
                         (listItemsToBeDeletedEvent)="onListItemsToBeDeleted($event)">
                   </list>
             </div>

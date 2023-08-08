@@ -18,7 +18,7 @@ export class AppComponent {
 
 
   ngOnInit() {
-    this.dataService.getItems('api/Test').subscribe(
+    this.dataService.getItems('api/List').subscribe(
       (listItems: Array<ListItem>) => {
         this.testList = listItems;
       }
@@ -31,9 +31,35 @@ export class AppComponent {
   }
 
 
+
+  onListItemAdded(newListItemText: string) {
+    this.dataService.post('api/List', {
+      text: newListItemText
+    }).subscribe((listItems: Array<ListItem>) => {
+      this.testList = listItems;
+    });
+  }
+
+
+
+
   editListItem() {
     this.listComponent.editListItem();
   }
+
+
+
+
+  onListItemEdited(listItem: ListItem) {
+    this.dataService.put('api/List', {
+      id: listItem.id,
+      text: listItem.text
+    }).subscribe((listItems: Array<ListItem>) => {
+      this.testList = listItems;
+    });
+  }
+
+
 
 
   onListItemsToBeDeleted(listItemsToBeDeleted: Array<ListItem>) {
@@ -41,19 +67,22 @@ export class AppComponent {
   }
 
 
-  onListItemAdded(listItemsTexts: Array<string>) {
-    this.dataService.post('api/Test', {
-      texts: listItemsTexts
+
+  onDeletedListItems(idsOfDeletedListItems: Array<any>) {
+    this.dataService.delete('api/List', {
+      ids: idsOfDeletedListItems
     }).subscribe((listItems: Array<ListItem>) => {
       this.testList = listItems;
     });
   }
 
 
-  onListItemEdited(listItem: ListItem) {
-    this.dataService.put('api/Test', {
-      id: listItem.id,
-      text: listItem.text
+  
+
+
+  onPastedListItems(pastedListItemsText: Array<string>) {
+    this.dataService.post('api/List/Pasted', {
+      texts: pastedListItemsText
     }).subscribe((listItems: Array<ListItem>) => {
       this.testList = listItems;
     });

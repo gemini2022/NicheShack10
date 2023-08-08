@@ -2,7 +2,7 @@
      class="list-container"
      (mousedown)="$event.clientX - listContainer.getBoundingClientRect().left >= listContainer.clientWidth ? stopMouseDownPropagation = true : null">
 
-    <div *ngFor="let listItem of list; trackBy:trumpy">
+    <div *ngFor="let listItem of list; trackBy:onTrackBy">
         <list-item #listItem
                    [listItem]="listItem"
                    (onDoubleClick)="editListItem()"

@@ -77,7 +77,7 @@ export class ListItemComponent {
 
 
 
-  public exitEdit(list: List, exitEditType?: ExitEditType) {
+  public exitEditMode(list: List, exitEditType?: ExitEditType) {
     if (this.htmlElement!.nativeElement.innerText.trim().length > 0) {
       exitEditType === ExitEditType.Escape ? this.cancelListItemEdit(list) : this.completeListItemEdit(list);
 
@@ -89,6 +89,7 @@ export class ListItemComponent {
     if (this.isNew) {
       list.list.shift();
       list.reinitializeList();
+      return
     }
     this.htmlElement!.nativeElement.innerText = '';
 
@@ -105,7 +106,7 @@ export class ListItemComponent {
 
   private completeListItemEdit(list: List): void {
     if (this.isNew) {
-      this.listPasted ? list.addedListItemEvent.emit(this.htmlElement.nativeElement.innerText.split('\n')) : list.addedListItemEvent.emit([this.htmlElement.nativeElement.innerText]);
+      this.listPasted ? list.pastedListItemsEvent.emit(this.htmlElement.nativeElement.innerText.split('\n')) : list.addedListItemEvent.emit(this.htmlElement.nativeElement.innerText);
 
     } else {
       list.editedListItemEvent.emit(new ListItem(this.listItem.id, this.htmlElement.nativeElement.innerText));
@@ -206,7 +207,7 @@ export class ListItemComponent {
     const caretOffset = this.textCaretPosition.anchorOffset;
 
     // Insert the clipboard data into the text
-    this.htmlElement.nativeElement.firstChild!.firstChild!.textContent = textContent.slice(0, caretOffset) + clipboardData + textContent.slice(this.textCaretPosition.focusOffset);
+    this.htmlElement.nativeElement.firstChild!.textContent = textContent.slice(0, caretOffset) + clipboardData + textContent.slice(this.textCaretPosition.focusOffset);
 
     // Reposition the caret to reside after the clipboard data
     const range = document.createRange();

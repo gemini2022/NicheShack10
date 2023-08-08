@@ -21,4 +21,8 @@ export class DataService {
   put(url: string, body: any) {
     return this.http.put<any>(url, body);
   }
+
+  delete(url: string, params: any) {
+    return this.http.delete<any>(url, { params: params });
+  }
 }

@@ -10,8 +10,8 @@ export class List {
     private ctrlKeyDown: boolean = false;
     private shiftKeyDown: boolean = false;
     private eventListenersAdded: boolean = false;
-
-    private listItemIds: Array<any> = new Array<any>();
+    private idOfNextSelectedListItemAfterDelete: any;
+    private idsOfCurrentListItems: Array<any> = new Array<any>();
 
     // Public
     public stopMouseDownPropagation: boolean = false;
@@ -20,9 +20,10 @@ export class List {
     @Input() public list: Array<ListItem> = new Array<ListItem>();
 
     // Events
+    @Output() public addedListItemEvent: EventEmitter<string> = new EventEmitter();
     @Output() public editedListItemEvent: EventEmitter<ListItem> = new EventEmitter();
-    @Output() public addedListItemEvent: EventEmitter<Array<string>> = new EventEmitter();
-    @Output() public deletedListItemsEvent: EventEmitter<Array<ListItem>> = new EventEmitter();
+    @Output() public pastedListItemsEvent: EventEmitter<Array<string>> = new EventEmitter();
+    @Output() public deletedListItemsEvent: EventEmitter<Array<any>> = new EventEmitter();
     @Output() public deleteKeyPressedEvent: EventEmitter<Array<ListItem>> = new EventEmitter();
     @Output() public listItemsToBeDeletedEvent: EventEmitter<Array<ListItem>> = new EventEmitter();
 
@@ -33,18 +34,19 @@ export class List {
 
     private ngOnChanges(changes: SimpleChanges): void {
         if (changes.list) {
-            this.selectEditedListItem();
             this.selectNewListItem();
+            this.selectEditedListItem();
+            this.selectNextListItemAfterDelete();
         }
     }
 
-    
+
 
 
 
     public selectListItem(listItem: ListItem): void {
         const editableListItem = this.listItemComponents.find(x => x.inEditMode);
-        if (editableListItem) editableListItem.exitEdit(this);
+        if (editableListItem) editableListItem.exitEditMode(this);
 
         const listItemComponent = this.listItemComponents.find(x => x.listItem.id == listItem.id);
         if (listItemComponent) this.setSelectedItems(listItemComponent);
@@ -55,15 +57,16 @@ export class List {
 
 
     public addListItem(): void {
+        this.idsOfCurrentListItems = [];
         this.addEventListeners();
         this.resetListItemProperties();
+        this.idOfEditedListItem = null;
         this.stopMouseDownPropagation = false;
-        this.list.forEach(x => this.listItemIds.push(x.id));
+        this.list.length == 0 ? this.idsOfCurrentListItems.push(0) : this.list.forEach(x => this.idsOfCurrentListItems.push(x.id));
         this.list.unshift(new ListItem('', ''));
         window.setTimeout(() => {
             this.listItemComponents.first.initialize(this);
         })
-
     }
 
 
@@ -72,6 +75,7 @@ export class List {
     public editListItem() {
         const listItem = this.listItemComponents.find(x => x.hasPrimarySelection);
         if (!listItem) return;
+        this.idsOfCurrentListItems = [];
         this.idOfEditedListItem = listItem.listItem.id;
         listItem.setToEditMode(this);
     }
@@ -81,19 +85,15 @@ export class List {
 
     public deleteListItems(): void {
         if (this.listItemComponents.find(x => x.inEditMode)) return;
-
         const selectedListItems = this.listItemComponents.filter(x => x.hasSecondarySelection);
         if (selectedListItems.length == 0) return;
 
-        const listItemsToBeDeleted = selectedListItems.map(x => new ListItem(x.listItem.id, x.listItem.text));
-        this.deletedListItemsEvent.emit(listItemsToBeDeleted);
-
         const indexOfPrimarySelectedListItem = this.listItemComponents.toArray().findIndex(x => x.hasPrimarySelection);
         const nextListComponent = indexOfPrimarySelectedListItem != -1 ? this.listItemComponents.toArray().slice(indexOfPrimarySelectedListItem + 1).find(x => !x.hasSecondarySelection) : null;
-        const nextSelectedListItem = nextListComponent ? this.list.find(x => x.id == nextListComponent.listItem.id) : null;
+        this.idOfNextSelectedListItemAfterDelete = nextListComponent ? this.list.find(x => x.id == nextListComponent.listItem.id)?.id : null;
 
-        this.list = this.list.filter(x => !listItemsToBeDeleted.includes(x));
-        if (nextSelectedListItem) this.selectListItem(nextSelectedListItem);
+        const idsOfListItemsToBeDeleted = selectedListItems.map(x => x.listItem.id);
+        this.deletedListItemsEvent.emit(idsOfListItemsToBeDeleted);
     }
 
 
@@ -234,7 +234,7 @@ export class List {
             return
         }
         const editableListItem = this.listItemComponents.find(x => x.inEditMode);
-        editableListItem ? editableListItem.exitEdit(this) : this.reinitializeList();
+        editableListItem ? editableListItem.exitEditMode(this) : this.reinitializeList();
     }
 
 
@@ -242,7 +242,7 @@ export class List {
 
     private onEscape() {
         const editableListItem = this.listItemComponents.find(x => x.inEditMode);
-        editableListItem ? editableListItem.exitEdit(this, ExitEditType.Escape) : this.reinitializeList();
+        editableListItem ? editableListItem.exitEditMode(this, ExitEditType.Escape) : this.reinitializeList();
     }
 
 
@@ -251,7 +251,7 @@ export class List {
     private onEnter(e: KeyboardEvent): void {
         e.preventDefault();
         const editableListItem = this.listItemComponents.find(x => x.inEditMode);
-        if (editableListItem) editableListItem.exitEdit(this, ExitEditType.Enter);
+        if (editableListItem) editableListItem.exitEditMode(this, ExitEditType.Enter);
     }
 
 
@@ -314,21 +314,63 @@ export class List {
 
 
 
+    
+
+    private selectNewListItem(): void {
+        if (this.idsOfCurrentListItems.length === 0) return;
+        const newListItemCount = this.list.length - this.idsOfCurrentListItems.length;
+        newListItemCount > 1 ? this.selectMultipleNewListItems() : this.selectOneNewListItem();
+    }
+
+
+
+    private selectMultipleNewListItems() {
+        let listItemComponent: ListItemComponent | undefined;
+
+        window.setTimeout(() => {
+            this.list.forEach((item, index) => {
+                const isNewListItem = !this.idsOfCurrentListItems.includes(item.id);
+                const currentListItemComponent = this.listItemComponents.get(index);
+
+                if (isNewListItem && currentListItemComponent) {
+                    listItemComponent = currentListItemComponent;
+                    listItemComponent.hasSecondarySelection = true;
+                }
+            });
+            this.setSecondarySelectionType();
+            if (listItemComponent) listItemComponent.hasPrimarySelection = true;
+            this.listItemComponents.forEach(component => (component.isDisabled = false));
+        });
+    }
+
+
+
+    private selectOneNewListItem() {
+        const indexOfListItemToSelect = this.list.findIndex(item => !this.idsOfCurrentListItems.includes(item.id));
+        this.selectListItemByIndex(indexOfListItemToSelect);
+    }
+
+
+
+
     private selectEditedListItem(): void {
         if (this.idOfEditedListItem != null) {
             const indexOfListItemToSelect = this.list.findIndex(x => x.id === this.idOfEditedListItem);
-            this.idOfEditedListItem = null;
             this.selectListItemByIndex(indexOfListItemToSelect);
         }
     }
 
-    private selectNewListItem(): void {
-        if (this.listItemIds.length > 0) {
-            const indexOfListItemToSelect = this.list.findIndex(x => !this.listItemIds.includes(x.id));
-            this.listItemIds = [];
+
+
+    private selectNextListItemAfterDelete() {
+        if (this.idOfNextSelectedListItemAfterDelete != null) {
+            const indexOfListItemToSelect = this.list.findIndex(x => x.id === this.idOfNextSelectedListItemAfterDelete);
             this.selectListItemByIndex(indexOfListItemToSelect);
         }
     }
+
+
+
 
     private selectListItemByIndex(index: number): void {
         window.setTimeout(() => {
@@ -338,7 +380,7 @@ export class List {
     }
 
 
-    trumpy(index: number, listItem: ListItem) {
+    onTrackBy(index: number, listItem: ListItem) {
         return listItem.id;
     }
 }
