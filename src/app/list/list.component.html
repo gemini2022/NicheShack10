@@ -1,5 +1,6 @@
 <div #listContainer
      class="list-container"
+     (scroll)="onScroll(listContainer)"
      (mousedown)="$event.clientX - listContainer.getBoundingClientRect().left >= listContainer.clientWidth ? stopMouseDownPropagation = true : null">
 
     <div *ngFor="let listItem of list; trackBy:onTrackBy">

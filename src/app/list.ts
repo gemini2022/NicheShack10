@@ -1,4 +1,4 @@
-import { Directive, ElementRef, EventEmitter, Input, Output, QueryList, SimpleChanges, ViewChildren } from "@angular/core";
+import { Directive, EventEmitter, Input, Output, QueryList, SimpleChanges, ViewChildren } from "@angular/core";
 import { ListItem } from "./list-item";
 import { ArrowKeyType, ExitEditType } from "./enums";
 import { ListItemComponent } from "./list-item/list-item.component";
@@ -6,12 +6,15 @@ import { ListItemComponent } from "./list-item/list-item.component";
 @Directive()
 export class List {
     // Private
+    private pageLength: number = 0;
     private idOfEditedListItem: any;
     private ctrlKeyDown: boolean = false;
     private shiftKeyDown: boolean = false;
     private eventListenersAdded: boolean = false;
     private idOfNextSelectedListItemAfterDelete: any;
     private idsOfCurrentListItems: Array<any> = new Array<any>();
+
+    private loadedPages: Array<number> = [0, 1];
 
     // Public
     public stopMouseDownPropagation: boolean = false;
@@ -37,9 +40,38 @@ export class List {
             this.selectNewListItem();
             this.selectEditedListItem();
             this.selectNextListItemAfterDelete();
+            if (changes.list.firstChange) this.pageLength = this.list.length;
         }
     }
 
+
+
+    public onScroll(listContainer: HTMLElement): void {
+        // const scrollPosition = listContainer.scrollTop;
+        // const totalScrollableHeight = listContainer.scrollHeight - listContainer.clientHeight;
+        const scrollPercentage = (listContainer.scrollTop / listContainer.clientHeight);
+
+        const itemCount = Math.round((scrollPercentage / 100) * this.list.length);
+        // console.log(itemCount);
+        const scrollPosition = listContainer.scrollTop + listContainer.clientHeight;
+
+
+        for (let i = 0; i < this.loadedPages.length; i++) {
+            if(scrollPercentage >= i * (1 / this.loadedPages.length) && scrollPercentage < (i + 1) * (1 / this.loadedPages.length)) {
+                if(!this.loadedPages[i + 1]) {
+                    console.log('load page')
+
+                    this.loadedPages[i + 1] = i + 1;
+                }
+            }
+        }
+
+        // if(scrollPercentage >= 100 / 1) {
+            
+        // }
+
+        
+    }
 
 
 
@@ -314,7 +346,7 @@ export class List {
 
 
 
-    
+
 
     private selectNewListItem(): void {
         if (this.idsOfCurrentListItems.length === 0) return;
