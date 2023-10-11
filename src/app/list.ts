@@ -77,10 +77,10 @@ export class List {
 
 
     public selectListItem(listItem: ListItem): void {
-        const editableListItem = this.listItemComponents.find(x => x.inEditMode);
+        const editableListItem = this.listItemComponents.find((x:any) => x.inEditMode);
         if (editableListItem) editableListItem.exitEditMode(this);
 
-        const listItemComponent = this.listItemComponents.find(x => x.listItem.id == listItem.id);
+        const listItemComponent = this.listItemComponents.find((x:any) => x.listItem.id == listItem.id);
         if (listItemComponent) this.setSelectedItems(listItemComponent);
     }
 
@@ -94,7 +94,7 @@ export class List {
         this.resetListItemProperties();
         this.idOfEditedListItem = null;
         this.stopMouseDownPropagation = false;
-        this.list.length == 0 ? this.idsOfCurrentListItems.push(0) : this.list.forEach(x => this.idsOfCurrentListItems.push(x.id));
+        this.list.length == 0 ? this.idsOfCurrentListItems.push(0) : this.list.forEach((x:any) => this.idsOfCurrentListItems.push(x.id));
         this.list.unshift(new ListItem('', ''));
         window.setTimeout(() => {
             this.listItemComponents.first.initialize(this);
@@ -105,7 +105,7 @@ export class List {
 
 
     public editListItem() {
-        const listItem = this.listItemComponents.find(x => x.hasPrimarySelection);
+        const listItem = this.listItemComponents.find((x:any) => x.hasPrimarySelection);
         if (!listItem) return;
         this.idsOfCurrentListItems = [];
         this.idOfEditedListItem = listItem.listItem.id;
@@ -116,15 +116,15 @@ export class List {
 
 
     public deleteListItems(): void {
-        if (this.listItemComponents.find(x => x.inEditMode)) return;
-        const selectedListItems = this.listItemComponents.filter(x => x.hasSecondarySelection);
+        if (this.listItemComponents.find((x:any) => x.inEditMode)) return;
+        const selectedListItems = this.listItemComponents.filter((x:any) => x.hasSecondarySelection);
         if (selectedListItems.length == 0) return;
 
-        const indexOfPrimarySelectedListItem = this.listItemComponents.toArray().findIndex(x => x.hasPrimarySelection);
-        const nextListComponent = indexOfPrimarySelectedListItem != -1 ? this.listItemComponents.toArray().slice(indexOfPrimarySelectedListItem + 1).find(x => !x.hasSecondarySelection) : null;
-        this.idOfNextSelectedListItemAfterDelete = nextListComponent ? this.list.find(x => x.id == nextListComponent.listItem.id)?.id : null;
+        const indexOfPrimarySelectedListItem = this.listItemComponents.toArray().findIndex((x:any) => x.hasPrimarySelection);
+        const nextListComponent = indexOfPrimarySelectedListItem != -1 ? this.listItemComponents.toArray().slice(indexOfPrimarySelectedListItem + 1).find((x:any) => !x.hasSecondarySelection) : null;
+        this.idOfNextSelectedListItemAfterDelete = nextListComponent ? this.list.find((x:any) => x.id == nextListComponent.listItem.id)?.id : null;
 
-        const idsOfListItemsToBeDeleted = selectedListItems.map(x => x.listItem.id);
+        const idsOfListItemsToBeDeleted = selectedListItems.map((x:any) => x.listItem.id);
         this.deletedListItemsEvent.emit(idsOfListItemsToBeDeleted);
     }
 
@@ -132,7 +132,7 @@ export class List {
 
 
     public getListItemsToBeDeleted() {
-        const listItemsToBeDeleted = this.listItemComponents.filter(x => x.hasSecondarySelection).map(x => new ListItem(x.listItem.id, x.listItem.text));
+        const listItemsToBeDeleted = this.listItemComponents.filter((x:any) => x.hasSecondarySelection).map((x:any) => new ListItem(x.listItem.id, x.listItem.text));
         this.listItemsToBeDeletedEvent.emit(listItemsToBeDeleted);
     }
 
@@ -156,14 +156,14 @@ export class List {
 
 
     private onItemSelectionUsingShiftKey(listItemComponent: ListItemComponent) {
-        this.listItemComponents.forEach(x => {
+        this.listItemComponents.forEach((x:any) => {
             x.hasUnselection = false;
             x.hasPrimarySelection = false;
             x.hasSecondarySelection = false;
             x.secondarySelectionType = null;
         });
         const selectedListItemIndex = this.list.indexOf(listItemComponent.listItem);
-        const pivotListItem = this.listItemComponents.find(x => x.isPivot);
+        const pivotListItem = this.listItemComponents.find((x:any) => x.isPivot);
         const indexOfPivotListItem = pivotListItem ? this.list.indexOf(pivotListItem.listItem) : -1;
         const start = Math.min(indexOfPivotListItem, selectedListItemIndex);
         const end = Math.max(indexOfPivotListItem, selectedListItemIndex);
@@ -178,7 +178,7 @@ export class List {
 
 
     private onItemSelectionUsingCtrlKey(listItemComponent: ListItemComponent) {
-        this.listItemComponents.forEach(x => {
+        this.listItemComponents.forEach((x:any) => {
             x.isPivot = false;
             x.hasUnselection = false;
             x.hasPrimarySelection = false;
@@ -265,7 +265,7 @@ export class List {
             this.stopMouseDownPropagation = false;
             return
         }
-        const editableListItem = this.listItemComponents.find(x => x.inEditMode);
+        const editableListItem = this.listItemComponents.find((x:any) => x.inEditMode);
         editableListItem ? editableListItem.exitEditMode(this) : this.reinitializeList();
     }
 
@@ -273,7 +273,7 @@ export class List {
 
 
     private onEscape() {
-        const editableListItem = this.listItemComponents.find(x => x.inEditMode);
+        const editableListItem = this.listItemComponents.find((x:any) => x.inEditMode);
         editableListItem ? editableListItem.exitEditMode(this, ExitEditType.Escape) : this.reinitializeList();
     }
 
@@ -282,7 +282,7 @@ export class List {
 
     private onEnter(e: KeyboardEvent): void {
         e.preventDefault();
-        const editableListItem = this.listItemComponents.find(x => x.inEditMode);
+        const editableListItem = this.listItemComponents.find((x:any) => x.inEditMode);
         if (editableListItem) editableListItem.exitEditMode(this, ExitEditType.Enter);
     }
 
@@ -292,7 +292,7 @@ export class List {
 
     private onArrowKey(e: KeyboardEvent, arrowKeyType: ArrowKeyType): void {
         e.preventDefault();
-        const currentListItem = this.listItemComponents.find(x => x.inEditMode || x.hasPrimarySelection || x.hasUnselection);
+        const currentListItem = this.listItemComponents.find((x:any) => x.inEditMode || x.hasPrimarySelection || x.hasUnselection);
         if (currentListItem) currentListItem.onArrowKey(this, arrowKeyType);
     }
 
@@ -300,8 +300,8 @@ export class List {
 
 
     private emitPressedDeleteKey(): void {
-        if (this.listItemComponents.find(x => x.inEditMode)) return;
-        const listItemsToBeDeleted = this.listItemComponents.filter(x => x.hasSecondarySelection).map(x => new ListItem(x.listItem.id, x.listItem.text));
+        if (this.listItemComponents.find((x:any) => x.inEditMode)) return;
+        const listItemsToBeDeleted = this.listItemComponents.filter((x:any) => x.hasSecondarySelection).map((x:any) => new ListItem(x.listItem.id, x.listItem.text));
         if (listItemsToBeDeleted.length > 0) this.deleteKeyPressedEvent.emit(listItemsToBeDeleted);
     }
 
@@ -321,7 +321,7 @@ export class List {
 
 
     private resetListItemProperties() {
-        this.listItemComponents.forEach(x => {
+        this.listItemComponents.forEach((x:any) => {
             x.isPivot = false;
             x.isDisabled = false;
             x.inEditMode = false;
@@ -366,12 +366,12 @@ export class List {
 
                 if (isNewListItem && currentListItemComponent) {
                     listItemComponent = currentListItemComponent;
-                    listItemComponent.hasSecondarySelection = true;
+                    listItemComponent!.hasSecondarySelection = true;
                 }
             });
             this.setSecondarySelectionType();
             if (listItemComponent) listItemComponent.hasPrimarySelection = true;
-            this.listItemComponents.forEach(component => (component.isDisabled = false));
+            this.listItemComponents.forEach((component:any) => (component.isDisabled = false));
         });
     }
 
@@ -387,7 +387,7 @@ export class List {
 
     private selectEditedListItem(): void {
         if (this.idOfEditedListItem != null) {
-            const indexOfListItemToSelect = this.list.findIndex(x => x.id === this.idOfEditedListItem);
+            const indexOfListItemToSelect = this.list.findIndex((x:any) => x.id === this.idOfEditedListItem);
             this.selectListItemByIndex(indexOfListItemToSelect);
         }
     }
@@ -396,7 +396,7 @@ export class List {
 
     private selectNextListItemAfterDelete() {
         if (this.idOfNextSelectedListItemAfterDelete != null) {
-            const indexOfListItemToSelect = this.list.findIndex(x => x.id === this.idOfNextSelectedListItemAfterDelete);
+            const indexOfListItemToSelect = this.list.findIndex((x:any) => x.id === this.idOfNextSelectedListItemAfterDelete);
             this.selectListItemByIndex(indexOfListItemToSelect);
         }
     }
